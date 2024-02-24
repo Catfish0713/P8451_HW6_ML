@@ -1,0 +1,141 @@
+---
+title: "P8451_HW6_ML"
+author: "Ruixi Li"
+date: "2024-02-20"
+output: html_document
+---
+
+```{r library, echo=FALSE}
+library(NHANES)
+library(tidyverse)
+library(caret)
+library(rpart.plot)
+```
+
+# Load and investigate data
+
+```{r load_data}
+data(NHANES) 
+
+```
+
+
+# select features and partition data
+
+* Although classification tree and support vector machine are both non-parametric method and don't assume the independence of features, interpretation might be faulty since dependence/correlation between features could be intrepreted as an interaction effect. This will not effect prediction. So, I would drop weight and height, two of which were used to calculate BMI. But theoretically, BMI is more correlated with diabetes and pre-diabetes. Although it's believed that BMI and physical activity are correlated, I think physical activity have some unexplained effect towards diabetes and should be kept as a predictor.
+
+```{r select_features_and_patittion}
+# feature selection
+NHANES_tailored = NHANES|>
+  select(Age, Race1, Education, HHIncome, Pulse, Diabetes, BMI, PhysActive, Smoke100) |> janitor::clean_names()
+
+# investigation and light cleaning
+NHANES_tailored|> skimr::skim()
+
+NHANES_tailored |> Amelia::missmap(main = "Missing values vs observed")
+
+NHANES_tailored = NHANES_tailored |> drop_na()
+
+NHANES_tailored |> Amelia::missmap(main = "Missing values vs observed")
+
+#tidyverse way to create data partition 
+set.seed(123)
+
+train.indices = NHANES_tailored |>
+  pull(diabetes) |>
+  createDataPartition(p = 0.7, list = FALSE)
+
+train.data = NHANES_tailored |>
+  slice(train.indices)
+
+test.data = NHANES_tailored |>
+  slice(-train.indices)
+
+summary(NHANES_tailored$diabetes)
+# Note that data are slightly unbalanced.
+```
+
+
+# Model building
+
+```{r model_building_tree}
+set.seed(123)
+#Creating 10-fold cross-validation and using down-sampling because of imbalance in data
+control= trainControl(method="cv", number=10, sampling="down", classProbs = T)
+
+# Up-sampling is preferred when the dataset is small, and data loss is a concern, while down-sampling might be more appropriate for large datasets where training time and resource utilization are significant considerations.
+
+
+# classification tree
+
+modelLookup("rpart")
+
+#Specify tuneGrid so caret explores wider variety of cp-values
+set.seed(123)
+
+#Create different values of cp to try
+cp.grid<-expand.grid(cp=seq(0.001,0.1, by=0.001))
+tree<-train(
+                     diabetes ~ ., 
+                     data=train.data, 
+                     method="rpart", 
+                     trControl=control, 
+                     tuneGrid=cp.grid,
+                     preProcess=c("center", "scale")
+                     )
+
+plot(tree, uniform=TRUE)
+tree$bestTune
+tree$results
+
+#Plot new "best" tree
+tree$finalModel |>
+  rpart.plot()
+
+#Example variable importance in model
+varImp(tree)
+
+#Obtain metrics of accuracy from training
+confusionMatrix(tree)
+```
+
+
+
+```{r model_building_svm}
+library(e1071)
+modelLookup("svmLinear")
+set.seed(123)
+#Incorporate different values for cost (C)
+svm<-train(
+                    diabetes ~ ., 
+                    data=train.data, 
+                    method="svmLinear",  
+                    trControl=control, 
+                    preProcess=c("center", "scale"), 
+                    tuneGrid=expand.grid(C=seq(0.001,2, length=30))
+                    )
+
+#Visualize accuracy versus values of C
+plot(svm)
+
+#Obtain metrics of accuracy from training
+confusionMatrix(svm)
+
+#See information about final model
+svm$finalModel
+
+```
+
+```{r model_building_log}
+set.seed(123)
+
+logistic <- train(diabetes ~ ., 
+                  data = train.data, method = "glm",
+                  family = "binomial",
+                  trControl = control,
+                  preProcess=c("center", "scale"))
+
+confusionMatrix(logistic)
+
+```
+
