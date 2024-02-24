@@ -10,6 +10,7 @@ library(NHANES)
 library(tidyverse)
 library(caret)
 library(rpart.plot)
+library(pROC)
 ```
 
 # Load and investigate data
@@ -24,7 +25,7 @@ data(NHANES)
 
 * Although classification tree and support vector machine are both non-parametric method and don't assume the independence of features, interpretation might be faulty since dependence/correlation between features could be intrepreted as an interaction effect. This will not effect prediction. So, I would drop weight and height, two of which were used to calculate BMI. But theoretically, BMI is more correlated with diabetes and pre-diabetes. Although it's believed that BMI and physical activity are correlated, I think physical activity have some unexplained effect towards diabetes and should be kept as a predictor.
 
-```{r select_features_and_patittion}
+```{r select_features_and_patittion, message=FALSE, warning=FALSE}
 # feature selection
 NHANES_tailored = NHANES|>
   select(Age, Race1, Education, HHIncome, Pulse, Diabetes, BMI, PhysActive, Smoke100) |> janitor::clean_names()
@@ -57,6 +58,8 @@ summary(NHANES_tailored$diabetes)
 
 
 # Model building
+
+## classification tree
 
 ```{r model_building_tree}
 set.seed(123)
@@ -99,7 +102,7 @@ varImp(tree)
 confusionMatrix(tree)
 ```
 
-
+## Support Vector Machine
 
 ```{r model_building_svm}
 library(e1071)
@@ -126,6 +129,8 @@ svm$finalModel
 
 ```
 
+## Logistic Regression
+
 ```{r model_building_log}
 set.seed(123)
 
@@ -137,5 +142,76 @@ logistic <- train(diabetes ~ .,
 
 confusionMatrix(logistic)
 
+```
+
+# Model evaluation
+
+## classification tree
+```{r model_evaluation_tree, message=FALSE, warning=FALSE}
+
+#Create predictions in test set
+pred.tree <- tree |>
+              predict(test.data)
+
+eval.results<-confusionMatrix(pred.tree, test.data$diabetes, positive = "Yes")
+print(eval.results)
+
+#Create predictions as probabilities on test set 
+pred.tree.prob <- tree %>% 
+  predict(test.data, type = "prob")
+
+#Another potential evaluation: Area under the Receiver Operating Curve (AUROC)
+analysis1 <- roc(response=test.data$diabetes, predictor=pred.tree.prob[,2])
+
+```
+
+## Support Vector Machine
+
+```{r model_evaluation_svm, message=FALSE, warning=FALSE}
+
+#Create predictions in test set
+pred.svm <- svm |>
+              predict(test.data)
+
+eval.results<-confusionMatrix(pred.svm, test.data$diabetes, positive = "Yes")
+print(eval.results)
+
+#Create predictions as probabilities on test set 
+pred.svm.prob <- svm %>% 
+  predict(test.data, type = "prob")
+
+#Another potential evaluation: Area under the Receiver Operating Curve (AUROC)
+analysis2 <- roc(response=test.data$diabetes, predictor=pred.svm.prob[,2])
+
+```
+
+## Logistic Regression
+
+```{r model_evaluation_log, message=FALSE, warning=FALSE}
+
+#Create predictions in test set
+pred.log <- logistic |>
+              predict(test.data)
+
+eval.results<-confusionMatrix(pred.log, test.data$diabetes, positive = "Yes")
+print(eval.results)
+
+#Create predictions as probabilities on test set 
+pred.log.prob <- logistic %>% 
+  predict(test.data, type = "prob")
+
+#Another potential evaluation: Area under the Receiver Operating Curve (AUROC)
+analysis3 <- roc(response=test.data$diabetes, predictor=pred.log.prob[,2])
+```
+
+## ROC curve of the three models
+
+```{r ROC_curve, warning=FALSE, message=FALSE}
+plot(1-analysis1$specificities,analysis1$sensitivities,type="l",
+ylab="Sensitivity",xlab="1-Specificity",col="black",lwd=2,
+main = "ROC Curve for three models")
+lines(1-analysis2$specificities,analysis2$sensitivities,type="l",col="red",lwd=2)
+lines(1-analysis3$specificities,analysis3$sensitivities,type="l",col="blue",lwd=2)
+abline(a=0,b=1)
 ```
 
