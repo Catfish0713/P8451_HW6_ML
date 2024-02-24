@@ -5,7 +5,7 @@ date: "2024-02-20"
 output: html_document
 ---
 
-```{r library, echo=FALSE}
+```{r library, message=FALSE, warning=FALSE}
 library(NHANES)
 library(tidyverse)
 library(caret)
@@ -13,7 +13,7 @@ library(rpart.plot)
 library(pROC)
 ```
 
-# Load and investigate data
+# 1. Load data
 
 ```{r load_data}
 data(NHANES) 
@@ -21,7 +21,7 @@ data(NHANES)
 ```
 
 
-# select features and partition data
+# 2. select features and partition data
 
 * Although classification tree and support vector machine are both non-parametric method and don't assume the independence of features, interpretation might be faulty since dependence/correlation between features could be intrepreted as an interaction effect. This will not effect prediction. So, I would drop weight and height, two of which were used to calculate BMI. But theoretically, BMI is more correlated with diabetes and pre-diabetes. Although it's believed that BMI and physical activity are correlated, I think physical activity have some unexplained effect towards diabetes and should be kept as a predictor.
 
@@ -57,7 +57,7 @@ summary(NHANES_tailored$diabetes)
 ```
 
 
-# Model building
+# 3. Model building
 
 ## classification tree
 
@@ -98,8 +98,7 @@ tree$finalModel |>
 #Example variable importance in model
 varImp(tree)
 
-#Obtain metrics of accuracy from training
-confusionMatrix(tree)
+
 ```
 
 ## Support Vector Machine
@@ -121,9 +120,6 @@ svm<-train(
 #Visualize accuracy versus values of C
 plot(svm)
 
-#Obtain metrics of accuracy from training
-confusionMatrix(svm)
-
 #See information about final model
 svm$finalModel
 
@@ -140,30 +136,22 @@ logistic <- train(diabetes ~ .,
                   trControl = control,
                   preProcess=c("center", "scale"))
 
+
+
+```
+
+# 4. Model selection and evaluation 
+
+```{r model_evaluation_tree, message=FALSE, warning=FALSE}
+
+#Obtain metrics of accuracy from training
+confusionMatrix(tree)
+confusionMatrix(svm)
 confusionMatrix(logistic)
 
 ```
 
-# Model evaluation
-
-## classification tree
-```{r model_evaluation_tree, message=FALSE, warning=FALSE}
-
-#Create predictions in test set
-pred.tree <- tree |>
-              predict(test.data)
-
-eval.results<-confusionMatrix(pred.tree, test.data$diabetes, positive = "Yes")
-print(eval.results)
-
-#Create predictions as probabilities on test set 
-pred.tree.prob <- tree %>% 
-  predict(test.data, type = "prob")
-
-#Another potential evaluation: Area under the Receiver Operating Curve (AUROC)
-analysis1 <- roc(response=test.data$diabetes, predictor=pred.tree.prob[,2])
-
-```
+* Since the accuracy for Support Vector Machine is the highest(0.7213), I would chose Support Vector Machine as my optimal model.
 
 ## Support Vector Machine
 
@@ -181,37 +169,16 @@ pred.svm.prob <- svm %>%
   predict(test.data, type = "prob")
 
 #Another potential evaluation: Area under the Receiver Operating Curve (AUROC)
-analysis2 <- roc(response=test.data$diabetes, predictor=pred.svm.prob[,2])
-
-```
-
-## Logistic Regression
-
-```{r model_evaluation_log, message=FALSE, warning=FALSE}
-
-#Create predictions in test set
-pred.log <- logistic |>
-              predict(test.data)
-
-eval.results<-confusionMatrix(pred.log, test.data$diabetes, positive = "Yes")
-print(eval.results)
-
-#Create predictions as probabilities on test set 
-pred.log.prob <- logistic %>% 
-  predict(test.data, type = "prob")
-
-#Another potential evaluation: Area under the Receiver Operating Curve (AUROC)
-analysis3 <- roc(response=test.data$diabetes, predictor=pred.log.prob[,2])
-```
-
-## ROC curve of the three models
-
-```{r ROC_curve, warning=FALSE, message=FALSE}
-plot(1-analysis1$specificities,analysis1$sensitivities,type="l",
-ylab="Sensitivity",xlab="1-Specificity",col="black",lwd=2,
+analysis <- roc(response=test.data$diabetes, predictor=pred.svm.prob[,2])
+plot(1-analysis$specificities,analysis$sensitivities,type="l",
+ylab="Sensitivity",xlab="1-Specificity",col="red",lwd=2,
 main = "ROC Curve for three models")
-lines(1-analysis2$specificities,analysis2$sensitivities,type="l",col="red",lwd=2)
-lines(1-analysis3$specificities,analysis3$sensitivities,type="l",col="blue",lwd=2)
 abline(a=0,b=1)
 ```
+
+# 5. Ethical consideration of using race as a predictor
+
+* Including race as a predictor in disease prediction models raises significant ethical considerations, reflecting broader societal issues around equity, discrimination, and the interpretation of genetic versus socio-environmental determinants of health. It may divert attention from underlying causes of health disparities, such as socio-economic status, physical activity and BMI which are more directly actionable. 
+
+
 
