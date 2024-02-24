@@ -2,7 +2,7 @@
 title: "P8451_HW6_ML"
 author: "Ruixi Li"
 date: "2024-02-20"
-output: html_document
+output: word_document
 ---
 
 ```{r library, message=FALSE, warning=FALSE}
@@ -77,8 +77,8 @@ modelLookup("rpart")
 set.seed(123)
 
 #Create different values of cp to try
-cp.grid<-expand.grid(cp=seq(0.001,0.1, by=0.001))
-tree<-train(
+cp.grid=expand.grid(cp=seq(0.001,0.1, by=0.001))
+tree=train(
                      diabetes ~ ., 
                      data=train.data, 
                      method="rpart", 
@@ -108,7 +108,7 @@ library(e1071)
 modelLookup("svmLinear")
 set.seed(123)
 #Incorporate different values for cost (C)
-svm<-train(
+svm=train(
                     diabetes ~ ., 
                     data=train.data, 
                     method="svmLinear",  
@@ -130,7 +130,7 @@ svm$finalModel
 ```{r model_building_log}
 set.seed(123)
 
-logistic <- train(diabetes ~ ., 
+logistic = train(diabetes ~ ., 
                   data = train.data, method = "glm",
                   family = "binomial",
                   trControl = control,
@@ -158,18 +158,18 @@ confusionMatrix(logistic)
 ```{r model_evaluation_svm, message=FALSE, warning=FALSE}
 
 #Create predictions in test set
-pred.svm <- svm |>
+pred.svm = svm |>
               predict(test.data)
 
-eval.results<-confusionMatrix(pred.svm, test.data$diabetes, positive = "Yes")
+eval.results=confusionMatrix(pred.svm, test.data$diabetes, positive = "Yes")
 print(eval.results)
 
 #Create predictions as probabilities on test set 
-pred.svm.prob <- svm %>% 
+pred.svm.prob = svm |> 
   predict(test.data, type = "prob")
 
 #Another potential evaluation: Area under the Receiver Operating Curve (AUROC)
-analysis <- roc(response=test.data$diabetes, predictor=pred.svm.prob[,2])
+analysis = roc(response=test.data$diabetes, predictor=pred.svm.prob[,2])
 plot(1-analysis$specificities,analysis$sensitivities,type="l",
 ylab="Sensitivity",xlab="1-Specificity",col="red",lwd=2,
 main = "ROC Curve for three models")
