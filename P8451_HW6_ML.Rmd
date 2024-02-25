@@ -2,7 +2,7 @@
 title: "P8451_HW6_ML"
 author: "Ruixi Li"
 date: "2024-02-20"
-output: html_document
+output: word_document
 ---
 
 ```{r library, message=FALSE, warning=FALSE}
@@ -85,8 +85,7 @@ tree=train(
                      data=train.data, 
                      method="rpart", 
                      trControl=control, 
-                     tuneGrid=cp.grid,
-                     preProcess=c("center", "scale")
+                     tuneGrid=cp.grid
                      )
 
 plot(tree, uniform=TRUE)
@@ -117,7 +116,7 @@ svm=train(
                     trControl=control, 
                     preProcess=c("center", "scale"), 
                     tuneGrid=expand.grid(C=seq(0.001,2, length=30))
-                    )
+                    )# tree-based methods do not require scaling
 
 #Visualize accuracy versus values of C
 plot(svm)
