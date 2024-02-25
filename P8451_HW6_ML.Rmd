@@ -2,7 +2,7 @@
 title: "P8451_HW6_ML"
 author: "Ruixi Li"
 date: "2024-02-20"
-output: word_document
+output: html_document
 ---
 
 ```{r library, message=FALSE, warning=FALSE}
@@ -18,6 +18,8 @@ library(pROC)
 ```{r load_data}
 data(NHANES) 
 
+
+
 ```
 
 
@@ -26,9 +28,9 @@ data(NHANES)
 * Although classification tree and support vector machine are both non-parametric method and don't assume the independence of features, interpretation might be faulty since dependence/correlation between features could be intrepreted as an interaction effect. This will not effect prediction. So, I would drop weight and height, two of which were used to calculate BMI. But theoretically, BMI is more correlated with diabetes and pre-diabetes. Although it's believed that BMI and physical activity are correlated, I think physical activity have some unexplained effect towards diabetes and should be kept as a predictor.
 
 ```{r select_features_and_patittion, message=FALSE, warning=FALSE}
-# feature selection
+# feature selection and remove duplicate rows
 NHANES_tailored = NHANES|>
-  select(Age, Race1, Education, HHIncome, Pulse, Diabetes, BMI, PhysActive, Smoke100) |> janitor::clean_names()
+  select(Age, Race1, Education, HHIncome, Pulse, Diabetes, BMI, PhysActive, Smoke100) |> janitor::clean_names() |> distinct()
 
 # investigation and light cleaning
 NHANES_tailored|> skimr::skim()
@@ -120,6 +122,7 @@ svm=train(
 #Visualize accuracy versus values of C
 plot(svm)
 
+svm$bestTune
 #See information about final model
 svm$finalModel
 
@@ -175,6 +178,8 @@ ylab="Sensitivity",xlab="1-Specificity",col="red",lwd=2,
 main = "ROC Curve for three models")
 abline(a=0,b=1)
 ```
+
+* The model appears to have a fair capacity to identify the positive class(sensitivity/recall=79.72%) but struggles with precision(precision=25.39%), indicating a high rate of false positives. This is also suggested by the low positive predictive value. The model is not outperforming a naive classifier that would predict the most frequent class for all cases, as evidenced by the comparison to the NIR and the associated p-value. The balanced accuracy is 74.18%, which  is a better metric than accuracy for imbalanced datasets.
 
 # 5. Ethical consideration of using race as a predictor
 

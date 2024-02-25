@@ -22,6 +22,6 @@ b) Support Vector Classifier (i.e. Support Vector Machine with a linear classifi
 
 c) Logistic regression.
 
-4. Select an "optimal" model and calculate final evaluation metrics in the test set. ONLY ONE MODEL SHOULD BE APPLIED IN THE TEST SET What do you conclude about your final model's performance?
+4. Select an "optimal" model and calculate final evaluation metrics in the test set. ONLY ONE MODEL SHOULD BE APPLIED IN THE TEST SET. What do you conclude about your final model's performance?
 
 5. In this analysis, we've used Race as one of the predictors in the model. Briefly discuss the ethical considerations of including race in a disease prediction model. (no more than 1-2 paragraphs)
